@@ -90,7 +90,7 @@ resource "aws_instance" "builder" {
   # TODO how can we pull that out of NixPkgs?
   ami = "ami-031821b5f83896474"
 
-  instance_type               = "t3.micro"
+  instance_type               = "t3.medium"
   subnet_id                   = aws_subnet.builder.id
   vpc_security_group_ids      = [aws_security_group.builder.id]
   ipv6_address_count          = 1

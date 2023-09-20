@@ -20,32 +20,26 @@ with pkgs;
     size = (1024 * 2);
   }];
 
-  networking.domain = "ca-central-1.the-infra.net";
   time.timeZone = "Etc/UTC";
-  i18n.defaultLocale = "en_CA.UTF-8";
+  i18n.defaultLocale = "en_US.UTF-8";
 
   nixpkgs.config.allowUnfree = true;
 
   environment.systemPackages = with pkgs; [
-    # super bare essentials, don't touch!
     vim
-    jq
     wget
-    terraform
     github-cli
-    awscli2
   ];
 
   services.openssh = {
     enable = true;
-    # hostKeys = [];
+    hostKeys = [];
   };
   networking.firewall.allowedTCPPorts = [
     22
   ];
   nix.sshServe.enable = true;
   nix.sshServe.keys = [ "{{ ssh_serve_key }}" ];
-
 
   environment.etc =  {
     gh_runner_token.text = "{{ gh_runner_token }}";
