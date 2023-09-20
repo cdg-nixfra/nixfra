@@ -28,9 +28,9 @@ resource "aws_route_table_association" "builder" {
 }
 
 resource "aws_route" "default" {
-  route_table_id              = aws_route_table._.id
-  destination_cidr_block      = "0.0.0.0/0"
-  gateway_id                  = aws_internet_gateway._.id
+  route_table_id         = aws_route_table._.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway._.id
 }
 
 resource "aws_route" "default6" {

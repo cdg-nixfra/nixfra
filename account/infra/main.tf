@@ -4,12 +4,12 @@ module "management_state" {
 
 resource "tls_private_key" "host_key" {
   algorithm = "RSA"
-  rsa_bits = 4096
+  rsa_bits  = 4096
 }
 
 resource "tls_private_key" "nix_ssh_serve" {
   algorithm = "RSA"
-  rsa_bits = 4096
+  rsa_bits  = 4096
 }
 
 resource "aws_key_pair" "cees" {
@@ -27,9 +27,9 @@ data "external" "gh_token" {
 module "nix_configuration" {
   source = "../../common/modules/mustache"
   vars = {
-    ssh_serve_key = trimspace(tls_private_key.nix_ssh_serve.public_key_openssh),
+    ssh_serve_key   = trimspace(tls_private_key.nix_ssh_serve.public_key_openssh),
     gh_runner_token = data.external.gh_token.result.token,
-    host_rsa_key = trimspace(tls_private_key.host_key.private_key_pem),
+    host_rsa_key    = trimspace(tls_private_key.host_key.private_key_pem),
   }
   template_file = "builder.nix.tpl"
 }
@@ -88,7 +88,7 @@ resource "aws_security_group" "builder" {
 
 resource "aws_instance" "builder" {
   # TODO how can we pull that out of NixPkgs?
-  ami                         = "ami-031821b5f83896474"
+  ami = "ami-031821b5f83896474"
 
   instance_type               = "t3.micro"
   subnet_id                   = aws_subnet.builder.id

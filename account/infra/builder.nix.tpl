@@ -20,7 +20,6 @@ with pkgs;
     size = (1024 * 2);
   }];
 
-
   networking.domain = "ca-central-1.the-infra.net";
   time.timeZone = "Etc/UTC";
   i18n.defaultLocale = "en_CA.UTF-8";
