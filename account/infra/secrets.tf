@@ -4,7 +4,16 @@ resource "aws_secretsmanager_secret" "nix_ssh_serve" {
   name = "staging/builder/nix_ssh_serve_key"
 }
 
-# No secret version, key creation with Terraform is not recommended. See make-nix-key.sh
+resource "aws_secretsmanager_secret" "rsa_host_key" {
+  name = "staging/builder/rsa_host_key"
+}
+
+resource "aws_secretsmanager_secret" "ed25519_host_key" {
+  name = "staging/builder/ed25519_host_key"
+}
+
+# No secret versions, key creation with Terraform is not recommended. See make-nix-key.sh
+# and make-ssh-keys.sh
 
 data "aws_iam_policy_document" "allow_secret_access" {
     statement {
