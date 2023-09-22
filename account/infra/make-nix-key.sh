@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+umask 007
+
 secret=`mktemp`
 public=`mktemp`
 

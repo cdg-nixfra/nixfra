@@ -18,9 +18,9 @@ resource "aws_s3_object" "host_key" {
 # Public Nix key goes in S3 so we can have services import
 # from its store.
 resource "aws_s3_object" "nix_key" {
-  bucket   = aws_s3_bucket.state.id
-  key      = "staging/builder/nix_key"
-  content  = file("nix-binary-cache-key.pub")
+  bucket  = aws_s3_bucket.state.id
+  key     = "staging/builder/nix_key"
+  content = file("nix-binary-cache-key.pub")
 }
 
 data "aws_iam_policy_document" "allow_state_access" {

@@ -3,6 +3,8 @@
 ed25519=`mktemp`
 rsa=`mktemp`
 
+umask 007
+
 trap "rm $ed25519 $rsa" 0
 
 rm $ed25519 $rsa

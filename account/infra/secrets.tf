@@ -16,12 +16,11 @@ resource "aws_secretsmanager_secret" "ed25519_host_key" {
 # and make-ssh-keys.sh
 
 data "aws_iam_policy_document" "allow_secret_access" {
-    statement {
-    sid    = "EnableAnotherAWSAccountToReadTheSecret"
+  statement {
     effect = "Allow"
 
     principals {
-      type        = "AWS"
+      type = "AWS"
       identifiers = [
         module.management_state.staging_account_id,
         module.management_state.production_account_id
