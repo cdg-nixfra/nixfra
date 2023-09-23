@@ -15,6 +15,7 @@ resource "aws_secretsmanager_secret" "ed25519_host_key" {
 # No secret versions, key creation with Terraform is not recommended. See make-nix-key.sh
 # and make-ssh-keys.sh
 
+# TODO this is not correct yet.
 data "aws_iam_policy_document" "allow_secret_access" {
   statement {
     effect = "Allow"

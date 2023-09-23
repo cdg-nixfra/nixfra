@@ -38,14 +38,9 @@ with pkgs;
   networking.firewall.allowedTCPPorts = [
     22
   ];
-  nix.sshServe.enable = true;
-  nix.sshServe.keys = [ "{{ ssh_serve_key }}" ];
 
   environment.etc =  {
     gh_runner_token.text = "{{ gh_runner_token }}";
-    "ssh/ssh_host_rsa_key".text = ''
-{{ host_rsa_key }}
-'';
   };
   services.github-runner = {
     enable = true;
@@ -54,6 +49,13 @@ with pkgs;
   };
   # Github Runner needs this :(
   nixpkgs.config.permittedInsecurePackages = [ "nodejs-16.20.2" ];
+
+  services.nix-serve = {
+    enable = true;
+    secretKeyFile = "/etc/nix/ssh_serve_key.conf";
+  };
+  # nix.sshServe.enable = true;
+  # nix.sshServe.keys = [ "{{ ssh_serve_key }}" ];
 
   virtualisation.amazon-init.enable = false; # Make sure we only run on first boot
 

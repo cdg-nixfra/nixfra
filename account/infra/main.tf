@@ -50,14 +50,24 @@ resource "aws_iam_role" "builder" {
     ]
   })
 
-  #inline_policy {
-  #name = "allow-builder-token"
-  #policy = jsonencode({
-  #Version = "2012-10-17"
-  #Statement = [
-  #]
-  #})
-  #}
+  inline_policy {
+    name = "allow-builder-secrets-access"
+    policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Sid    = "AllowBuilderSecretsAccess"
+          Action = "secretsmanager:GetSecretValue"
+          Effect = "Allow"
+          Resource = [
+            aws_secretsmanager_secret.nix_ssh_serve.arn,
+            aws_secretsmanager_secret.rsa_host_key.arn,
+            aws_secretsmanager_secret.ed25519_host_key.arn,
+          ]
+        }
+      ]
+    })
+  }
 }
 resource "aws_iam_instance_profile" "builder" {
   name = "builder"
@@ -100,6 +110,15 @@ resource "aws_instance" "builder" {
   user_data_replace_on_change = true
   root_block_device {
     volume_size = 25
+  }
+
+  connection {
+    type = "ssh"
+    user = "root"
+    host = self.public_ip
+  }
+  provisioner "remote-exec" {
+    script = "./setup-builder-keys.sh"
   }
 }
 
