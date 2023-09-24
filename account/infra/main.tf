@@ -2,21 +2,13 @@ module "management_state" {
   source = "../management-state"
 }
 
-resource "tls_private_key" "host_key" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "tls_private_key" "nix_ssh_serve" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
 resource "aws_key_pair" "cees" {
   key_name   = "cees-key"
   public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC3ezI+JP1lrdI6FYd1ynnCPv/IZS4wrxZXnXGpMBvJIZ5fvtHC/8pnHkZiFR64IZvd0Irrh+aJ79ahLa2EToqq9pLVmWx8vIGPZzpE6d/buBg1qjlzKn8iWjlJc938WlvqiqCkcMjLKKkfBmMDg2pUFxPE5QPxAHcaszxxEO59/l9C7tOpqDeX7CozlYoUtIVCvOLLgMPIbRTjPbJ6Qax8bmqoB5/F5Arm7GGckgJ9kQblBncy1sCsykQtvos7MbBbsPmjGEBvGEbvyxORlMBLFMyhEnUt+fVipOyFqiMv6LgVA7l73cOmGMOeWX5/PwxmNxUNAjhAy/1t1koxnZ3GT+IvKQSq3v3B14ZJTHCpsiQMRoz/fpj8BBY4tv8eTfzGljlJGEOV2Q/ju1ewBtFsSDugXylqfj2DQjt7PrFDH1t4l/sxt5IhicQr6Ljg/e9egcXTEcI8DRETnIf1963e8HyLccNGO1ZSMD5CRUa3R2ih74yjyGDCRpmwAJJ9IvE= cees@system76-pc"
 }
 
+# This is not ideal but a GH token has a short lifetime so it is less
+# bad if it lands in TF state. Still needs to be fixed at some point, though.
 data "external" "gh_token" {
   program = [
     "sh", "-c",
@@ -27,9 +19,8 @@ data "external" "gh_token" {
 module "nix_configuration" {
   source = "../../common/modules/mustache"
   vars = {
-    ssh_serve_key   = trimspace(tls_private_key.nix_ssh_serve.public_key_openssh),
+    builder_client_key   = file("./builder_client_key.pub"),
     gh_runner_token = data.external.gh_token.result.token,
-    host_rsa_key    = trimspace(tls_private_key.host_key.private_key_pem),
   }
   template_file = "builder.nix.tpl"
 }
@@ -60,9 +51,9 @@ resource "aws_iam_role" "builder" {
           Action = "secretsmanager:GetSecretValue"
           Effect = "Allow"
           Resource = [
-            aws_secretsmanager_secret.nix_ssh_serve.arn,
-            aws_secretsmanager_secret.rsa_host_key.arn,
-            aws_secretsmanager_secret.ed25519_host_key.arn,
+            data.aws_secretsmanager_secret.nix_signing_key.arn,
+            data.aws_secretsmanager_secret.rsa_host_key.arn,
+            data.aws_secretsmanager_secret.ed25519_host_key.arn,
           ]
         }
       ]

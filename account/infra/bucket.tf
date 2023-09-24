@@ -7,20 +7,29 @@ import {
   id = "nixfra-infra-tfstate"
 }
 
-# Host key goes in S3 so we can have services verify
-# the host.
-resource "aws_s3_object" "host_key" {
-  bucket  = aws_s3_bucket.state.id
-  key     = "staging/builder/host_key"
-  content = tls_private_key.host_key.public_key_openssh
+# Public keys goes in S3 so we can have services use it for verification
+
+locals {
+  keys = [
+    "ed25519_host_key",
+    "rsa_host_key",
+    "nix_binary_cache_key"
+  ]
 }
 
-# Public Nix key goes in S3 so we can have services import
-# from its store.
-resource "aws_s3_object" "nix_key" {
+resource "aws_s3_object" "public_key" {
+  for_each = toset(local.keys)
   bucket  = aws_s3_bucket.state.id
-  key     = "staging/builder/nix_key"
-  content = file("nix-binary-cache-key.pub")
+  key     = "infra/builder/${each.key}.pub"
+  content = file("${each.key}.pub")
+}
+
+# Not needed by clients, we stash it in S3 in case we need it
+# somewhere else.
+resource "aws_s3_object" "client_key" {
+  bucket  = aws_s3_bucket.state.id
+  key     = "infra/builder_client_key.pub"
+  content = file("builder_client_key.pub")
 }
 
 data "aws_iam_policy_document" "allow_state_access" {
@@ -40,8 +49,7 @@ data "aws_iam_policy_document" "allow_state_access" {
     ]
 
     resources = [
-      "${aws_s3_bucket.state.arn}/${aws_s3_object.host_key.key}",
-      "${aws_s3_bucket.state.arn}/${aws_s3_object.nix_key.key}"
+      "${aws_s3_bucket.state.arn}/infra/builder/*",
     ]
   }
 }

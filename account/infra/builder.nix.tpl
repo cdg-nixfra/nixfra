@@ -50,12 +50,9 @@ with pkgs;
   # Github Runner needs this :(
   nixpkgs.config.permittedInsecurePackages = [ "nodejs-16.20.2" ];
 
-  services.nix-serve = {
-    enable = true;
-    secretKeyFile = "/etc/nix/ssh_serve_key.conf";
-  };
-  # nix.sshServe.enable = true;
-  # nix.sshServe.keys = [ "{{ ssh_serve_key }}" ];
+  nix.sshServe.enable = true;
+  nix.sshServe.keys = [ "{{ builder_client_key }}" ];
+  nix.settings.secret-key-files = [ "/etc/nix/signing_key"];
 
   virtualisation.amazon-init.enable = false; # Make sure we only run on first boot
 

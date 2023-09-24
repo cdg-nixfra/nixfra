@@ -1,21 +1,24 @@
-# Private key goes into secrets manager so we can use it
-# to pull closures.
-resource "aws_secretsmanager_secret" "nix_ssh_serve" {
-  name = "staging/builder/nix_ssh_serve_key"
+# Declare and import keys created with the make-*key.sh scripts.
+# We don't want secrets to touch Terraform state so we generate things
+# outside of it. These resources normally get terraform-imported by
+# the shellscripts.
+data "aws_secretsmanager_secret" "nix_signing_key" {
+  name = "nixfra/infra/builder/nix_signing_key"
 }
 
-resource "aws_secretsmanager_secret" "rsa_host_key" {
-  name = "staging/builder/rsa_host_key"
+data "aws_secretsmanager_secret" "rsa_host_key" {
+  name = "nixfra/infra/builder/rsa_host_key"
 }
 
-resource "aws_secretsmanager_secret" "ed25519_host_key" {
-  name = "staging/builder/ed25519_host_key"
+data "aws_secretsmanager_secret" "ed25519_host_key" {
+  name = "nixfra/infra/builder/ed25519_host_key"
 }
 
-# No secret versions, key creation with Terraform is not recommended. See make-nix-key.sh
-# and make-ssh-keys.sh
+data "aws_secretsmanager_secret" "builder_client_key" {
+  name = "nixfra/infra/builder_client_key"
+}
 
-# TODO this is not correct yet.
+# Allow staging account to get secrets they need.
 data "aws_iam_policy_document" "allow_secret_access" {
   statement {
     effect = "Allow"
@@ -29,11 +32,13 @@ data "aws_iam_policy_document" "allow_secret_access" {
     }
 
     actions   = ["secretsmanager:GetSecretValue"]
-    resources = ["*"]
+    resources = [
+      data.aws_secretsmanager_secret.builder_client_key.arn
+    ]
   }
 }
 
 resource "aws_secretsmanager_secret_policy" "allow_secret_access" {
-  secret_arn = aws_secretsmanager_secret.nix_ssh_serve.arn
+  secret_arn = data.aws_secretsmanager_secret.nix_signing_key.arn
   policy     = data.aws_iam_policy_document.allow_secret_access.json
 }

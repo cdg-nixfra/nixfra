@@ -3,23 +3,27 @@
 
 # Setup host keys
 
-rm -f /etc/ssh/ssh_host_*_key*
+cd /etc/ssh
+
+rm -f ssh_host_*_key*
 
 aws secretsmanager get-secret-value \
-    --secret-id "staging/builder/rsa_host_key"  |
-    jq -r .SecretString >/etc/ssh/ssh_host_rsa_key
+    --secret-id "nixfra/infra/builder/rsa_host_key"  |
+    jq -r .SecretString >ssh_host_rsa_key
 aws secretsmanager get-secret-value \
-    --secret-id "staging/builder/ed25519_host_key"  |
-    jq -r .SecretString >/etc/ssh/ssh_host_ed25519_key
+    --secret-id "nixfra/infra/builder/ed25519_host_key"  |
+    jq -r .SecretString >ssh_host_ed25519_key
 
-chmod 400 /etc/ssh/ssh_host*
+chmod 400 ssh_host*
+ssh-keygen -y -f ssh_host_rsa_key >ssh_host_rsa_key.pub
+ssh-keygen -y -f ssh_host_ed25519_key >ssh_host_ed25519_key.pub
 
 systemctl restart sshd
 
-# Setup Nix keys
+# Setup Nix signing key
 
 aws secretsmanager get-secret-value \
-    --secret-id "staging/builder/nix_ssh_serve_key"     |
-    jq -r .SecretString >/etc/nix/ssh_serve_key.conf
+    --secret-id "nixfra/infra/builder/nix_signing_key"     |
+    jq -r .SecretString >/etc/nix/signing_key
 ``
-chmod 400 /etc/nix/ssh_server_key.conf
+chmod 400 /etc/nix/signing_key
