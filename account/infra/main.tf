@@ -19,8 +19,8 @@ data "external" "gh_token" {
 module "nix_configuration" {
   source = "../../common/modules/mustache"
   vars = {
-    builder_client_key   = file("./builder_client_key.pub"),
-    gh_runner_token = data.external.gh_token.result.token,
+    builder_client_key = file("./builder_client_key.pub"),
+    gh_runner_token    = data.external.gh_token.result.token,
   }
   template_file = "builder.nix.tpl"
 }

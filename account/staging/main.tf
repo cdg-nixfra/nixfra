@@ -2,6 +2,11 @@ module "management_state" {
   source = "../management-state"
 }
 
+resource "aws_key_pair" "cees" {
+  key_name   = "cees-key"
+  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC3ezI+JP1lrdI6FYd1ynnCPv/IZS4wrxZXnXGpMBvJIZ5fvtHC/8pnHkZiFR64IZvd0Irrh+aJ79ahLa2EToqq9pLVmWx8vIGPZzpE6d/buBg1qjlzKn8iWjlJc938WlvqiqCkcMjLKKkfBmMDg2pUFxPE5QPxAHcaszxxEO59/l9C7tOpqDeX7CozlYoUtIVCvOLLgMPIbRTjPbJ6Qax8bmqoB5/F5Arm7GGckgJ9kQblBncy1sCsykQtvos7MbBbsPmjGEBvGEbvyxORlMBLFMyhEnUt+fVipOyFqiMv6LgVA7l73cOmGMOeWX5/PwxmNxUNAjhAy/1t1koxnZ3GT+IvKQSq3v3B14ZJTHCpsiQMRoz/fpj8BBY4tv8eTfzGljlJGEOV2Q/ju1ewBtFsSDugXylqfj2DQjt7PrFDH1t4l/sxt5IhicQr6Ljg/e9egcXTEcI8DRETnIf1963e8HyLccNGO1ZSMD5CRUa3R2ih74yjyGDCRpmwAJJ9IvE= cees@system76-pc"
+}
+
 locals {
   azs = ["ca-central-1a", "ca-central-1b"]
 }
@@ -50,14 +55,28 @@ resource "aws_route" "default6" {
   gateway_id                  = aws_internet_gateway._.id
 }
 
-# Note - we can just include the file but leaving it like
-# this for some future templating work, like the app that it
-# needs to run etc.
-data "external" "deployinator_nix" {
-  program = [
-    "sh", "-c",
-    "cat deployinator.nix | jq -Rs '{s: .}'"
-  ]
+locals {
+  infra_bucket = "nixfra-infra-tfstate"
+}
+
+data "aws_s3_object" "builder_rsa_host_key" {
+  bucket = local.infra_bucket
+  key    = "infra/builder/rsa_host_key.pub"
+}
+
+data "aws_s3_object" "builder_ed25519_host_key" {
+  bucket = local.infra_bucket
+  key    = "infra/builder/ed25519_host_key.pub"
+}
+
+
+module "nix_configuration" {
+  source = "../../common/modules/mustache"
+  vars = {
+    builder_rsa_host_key     = data.aws_s3_object.builder_rsa_host_key.body
+    builder_ed25519_host_key     = data.aws_s3_object.builder_ed25519_host_key.body
+  }
+  template_file = "deployinator.nix.tpl"
 }
 
 resource "aws_security_group" "backend" {
@@ -95,24 +114,74 @@ resource "aws_security_group_rule" "all-out" {
   ipv6_cidr_blocks  = ["::/0"]
 }
 
+resource "aws_iam_role" "deployinator" {
+  name = "deployinator"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  inline_policy {
+    name = "deployinator"
+    policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Action = "s3:GetObject"
+          Effect = "Allow"
+          Resource = [
+            "arn:aws:s3:::nixfra-infra-tfstate/infra/builder/*"
+          ]
+        }
+      ]
+    })
+  }
+
+}
+resource "aws_iam_instance_profile" "deployinator" {
+  name = "deployinator"
+  role = aws_iam_role.deployinator.name
+}
+
+
 resource "aws_instance" "backend" {
   count = length(local.azs)
 
   # TODO how can we pull that out of NixPkgs?
   ami = "ami-031821b5f83896474"
 
-  #ami                         = module.ami.id
   instance_type               = "t3.micro"
   subnet_id                   = aws_subnet.backend[count.index].id
   vpc_security_group_ids      = [aws_security_group.backend.id]
-  user_data                   = data.external.deployinator_nix.result.s
+  ipv6_address_count          = 1
+  iam_instance_profile        = aws_iam_instance_profile.deployinator.name
+  key_name                    = aws_key_pair.cees.key_name
+  user_data                   = module.nix_configuration.rendered
   user_data_replace_on_change = true
   root_block_device {
-    volume_size = 5
+    volume_size = 25
   }
   tags = {
     nixfra_environment = "staging"
     nixfra_app         = "nixfra_phx"
+  }
+
+  connection {
+    type = "ssh"
+    user = "root"
+    host = self.public_ip
+  }
+  provisioner "remote-exec" {
+    script = "./setup-deployinator-keys.sh"
   }
 }
 
@@ -154,6 +223,17 @@ resource "aws_lb_target_group" "backend" {
   port     = 4000
   protocol = "HTTP"
   vpc_id   = aws_vpc._.id
+
+  deregistration_delay = 5
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    interval            = 5
+    path                = "/"
+    timeout             = 2
+    unhealthy_threshold = 2
+  }
+
 }
 #resource "aws_lb_target_group_attachment" "backend" {
 #count            = length(local.azs)
@@ -166,18 +246,6 @@ resource "aws_lb_listener" "backend_tls" {
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-2016-08"
   certificate_arn   = aws_acm_certificate_validation.backend.certificate_arn
-
-  deregistration_delay = 5
-  connection_termination = true
-  health_check {
-    enabled             = true
-    healthy_threshold   = 2
-    interval            = 5
-    path                = "/"
-    timeout             = 2
-    unhealthy_threshold = 2
-  }
-
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.backend.arn

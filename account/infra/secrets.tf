@@ -31,7 +31,7 @@ data "aws_iam_policy_document" "allow_secret_access" {
       ]
     }
 
-    actions   = ["secretsmanager:GetSecretValue"]
+    actions = ["secretsmanager:GetSecretValue"]
     resources = [
       data.aws_secretsmanager_secret.builder_client_key.arn
     ]
