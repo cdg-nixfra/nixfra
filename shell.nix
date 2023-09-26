@@ -17,6 +17,6 @@ mkShell {
   shellHook = ''
     eval "$(direnv hook bash)"
     export TF_VAR_region=ca-central-1
-    alias instances="aws ec2 describe-instances | jq '.Reservations[].Instances[].InstanceId'"
+    alias instances="aws ec2 describe-instances | jq -r '.Reservations[].Instances[].InstanceId'"
   '';
 }

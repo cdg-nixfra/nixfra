@@ -7,12 +7,13 @@
 * [x] Cloud-init to start Github thingy.
 * [x] Give builder instance role to allow image builds
 * [ ] Networking access between VPCs
-* [ ] Key management. Terraform needs to install private key in builder and
-      put public key somewhere for server. nix.extraOptions controls nix.conf
-      nix-store --generate-binary-cache-key infrax-builder.1 secret public
+* [x] SSH Key management.
+* [ ] Nix Key management.
 
       nix.conf secret-key-files: space-sep'd secret key _files_
       nix.conf trusted-public-keys: space-sep'd public key _values_
+* [ ] Add cross-account bucket access to admin permission set in SSO
+* [ ] Terraform provisioning role?
 
 * [x] Test phoenix application
 * [ ] Github thingy to build that thing on EC2 builder

@@ -69,12 +69,18 @@ data "aws_s3_object" "builder_ed25519_host_key" {
   key    = "infra/builder/ed25519_host_key.pub"
 }
 
+data "aws_s3_object" "builder_signing_key" {
+  bucket = local.infra_bucket
+  key    = "infra/builder/nix_binary_cache_key.pub"
+}
+
 
 module "nix_configuration" {
   source = "../../common/modules/mustache"
   vars = {
     builder_rsa_host_key     = data.aws_s3_object.builder_rsa_host_key.body
     builder_ed25519_host_key     = data.aws_s3_object.builder_ed25519_host_key.body
+    builder_signing_key = data.aws_s3_object.builder_signing_key.body
   }
   template_file = "deployinator.nix.tpl"
 }
@@ -141,17 +147,24 @@ resource "aws_iam_role" "deployinator" {
           Resource = [
             "arn:aws:s3:::nixfra-infra-tfstate/infra/builder/*"
           ]
+        },
+        {
+          Action = "sts:AssumeROle"
+          Effect = "Allow"
+          Resource = [
+            "arn:aws:iam::${module.management_state.infra_account_id}:role/client_key_access"
+          ]
         }
       ]
     })
   }
 
 }
+
 resource "aws_iam_instance_profile" "deployinator" {
   name = "deployinator"
   role = aws_iam_role.deployinator.name
 }
-
 
 resource "aws_instance" "backend" {
   count = length(local.azs)

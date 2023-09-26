@@ -44,6 +44,11 @@ with pkgs;
     22
   ];
 
+  nix.settings.trusted-public-keys = [
+    "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+    "{{ builder_signing_key }}"
+  ];
+
   virtualisation.amazon-init.enable = false; # Make sure we only run on first boot
 
   system.stateVersion = "23.05"; # Did you read the comment?
